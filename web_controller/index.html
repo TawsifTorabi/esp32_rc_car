@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IoT RC Car Controller</title>
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<h4>IoT RC Car Controller</h4>
+	<span class="socketConfigArea">
+		<small>RC Car Server IP Address: </small><br>
+		<input type="url" name="" id="serverAddress" value="ws://192.168.1.103:80/remote" style="width: 300px; margin-bottom: 11px;"/>
+		<!-- Button to start WebSocket connection -->
+		<button id="connectButton" onclick="openWebSocket();">Connect</button>
+		<button id="disconnectButton" onclick="closeWebSocket();" style="display: none;">Disconnect</button>
+		<span id="connectionStatus">❌ Not Connected</span>
+	</span>
+	<br>
+
+	<small>Stat:</small>
+	<!-- Display which key is being pressed -->
+	<span class="console">
+		Pressed Key: <span id="pressedKey">None</span>
+	</span>
+
+	<br>
+
+	<!-- Display ping in milliseconds -->
+	<span class="ping">
+		Ping: <span id="pingValue">0</span>
+	</span>
+	<span class="speed">
+		Throttle: <b><span id="sliderValue">150</span></b>
+	</span>
+	<span class="refreshRate">
+		Delay: <b><span id="sliderValue2">90</span>ms</b>
+	</span>
+	<br>
+
+	<span id="manualThrottle">
+		Max Throttle: 
+		<input type="range" id="slider" class="slider" min="20" max="255" value="150" step="1"></br>
+	</span>
+	<br>
+
+	<span id="manualThrottle">
+		Refresh Rate:
+		<input type="range" id="slider2" class="slider" min="50" max="300" value="90" step="1"></br>
+	</span>
+
+	<table border="1px">
+		<tr>
+			<th colspan="3">Controls</th>
+		</tr>
+		<tr>
+			<td><button id="webHeadlightButton" onclick="headlight();">Headlight</button></td>
+			<td><button id="webHeadlightButton" onclick="honk();">Honk</button></td>
+			<td><button id="webHeadlightButton" onclick="music();">Music</button></td>
+		</tr>
+		<tr>
+			<td>
+				<table>
+					<tr>			
+						<td colspan="4" style="text-align: center;"><button id="fwd" onmousedown="forward();">🔼</button></td>
+					</tr>
+					<tr>
+						<td><button onmousedown="left();">◀</button></td>
+						<td></td>
+						<td><button onmousedown="right();">▶</button></td>
+					</tr>
+					<tr>
+						<td colspan="4" style="text-align: center;"><button onmousedown="backward();" onmouseup="stop();">🔽</button></td>
+					</tr>
+				</table>
+			</td>
+		</tr>
+
+	</table>
+	<div id="joyDiv" style="width:200px;height:200px;margin-bottom:20px;margin:50px"></div>
+			
+	<br>
+	
+	<script src="joy.js"></script> 
+	<script>
+		let maxSpeed = 150; // Maximum speed
+		let motor1Speed = 0;
+		let motor2Speed = 0;
+		let PollingRate = 90;
+		let userClosedConnection = false;
+		var joy = new JoyStick('joyDiv');
+	</script>
+	
+	
+	<div class="container">
+		Posizione X:<input id="posizioneX" type="text" class="form-control" /></br>
+		Posizione Y:<input id="posizioneY" type="text" class="form-control" /></br>
+		Direzione:<input id="direzione" type="text" class="form-control" /></br>
+		X :<input id="X" type="text" class="form-control" /></br>
+		Y :<input id="Y" type="text" class="form-control" />
+	</div>
+
+	<script src="communication.js"></script> 
+	<script src="slider.js"></script> 
+	<script src="controller.js"></script> 
+	<script>
+
+	
+
+
+// Function to poll gamepad input
+async function gameLoopVirtual() {
+        		
+			// Calculate motor speed based on joystick input (assuming X and Y axis)
+		
+			const xValue = joy.GetX()/100; // X-axis input (-1 to 1)
+			console.log(xValue);
+			const yValue = joy.GetY()/100; // Y-axis input (-1 to 1)
+			console.log(yValue);
+	
+			// Map joystick input values directly to motor speed within the range of 0 to 255
+			let motor1Speed = Math.round(maxSpeed * (yValue + xValue));
+			let motor2Speed = Math.round(maxSpeed * (yValue - xValue));
+	
+			// When yValue is less than -0.2, adjust the motor speed linearly within the range of 0 to 255
+			if (yValue < -0.2) {
+				const linearSpeed = Math.round(maxSpeed * (-yValue)); // Linear speed based on joystick position
+				motor1Speed = linearSpeed;
+				motor2Speed = linearSpeed;
+			}
+	
+			// Calculate direction based on joystick input
+			let direction = "stop";
+			if (yValue < 0.2) {
+				direction = "backward";
+			} else if (yValue > -0.2) {
+				direction = "forward";
+			} else if (xValue < 0.2) {
+				direction = "left";
+				motor2Speed = motor1Speed;
+			} else if (xValue > -0.2) {
+				direction = "right";
+				motor1Speed = motor2Speed;
+			}
+	
+			// Send the command, direction, and motor speed
+			
+				sendCommand(`direction:${direction},speed:${motor1Speed},${motor2Speed}`);
+			
+			
+			// Update the display
+			document.getElementById("pressedKey").textContent = `Speed: ${motor1Speed},${motor2Speed}, Direction: ${direction}`;
+			console.log(`Speed: ${motor1Speed},${motor2Speed}, Direction: ${direction}`);
+		
+	}
+	
+	setInterval(gameLoopVirtual, PollingRate);
+	
+	
+	var inputPosX = document.getElementById("posizioneX");
+	var inputPosY = document.getElementById("posizioneY");
+	var direzione = document.getElementById("direzione");
+	var x = document.getElementById("X");
+	var y = document.getElementById("Y");
+	
+	setInterval(function(){ inputPosX.value=joy.GetPosX(); }, 50);
+	setInterval(function(){ inputPosY.value=joy.GetPosY(); }, 50);
+	setInterval(function(){ direzione.value=joy.GetDir(); }, 50);
+	setInterval(function(){ x.value=joy.GetX(); }, 50);
+	setInterval(function(){ y.value=joy.GetY(); }, 50);
+	</script>
+
+</body>
+</html>
