@@ -1,6 +1,9 @@
 let webSocket = null;
 let pingStart;
 let pingInterval;
+let BatteryInterval;
+let lowbatteryCounter = 0;
+
 
 // Function to send a command to the RC car
 async function sendCommand(command) {
@@ -32,6 +35,9 @@ async function openWebSocket() {
 			pingStart = Date.now();
 			webSocket.send("ping");
 		}, 1000); // Send ping every 1 second
+		BatteryInterval = setInterval(() => {
+			webSocket.send("batlvl");
+		}, 3000); // Send Battery Data Request every 3 second
 	};
 	webSocket.onclose = function () {
 		console.log("WebSocket closed.");
@@ -48,6 +54,21 @@ async function openWebSocket() {
 			const pingValue = Date.now() - pingStart;
 			document.getElementById("pingValue").textContent = pingValue + " ms";
 		}
+		if (event.data.split(":")[0] === "battery") {
+			document.getElementById("batteryVoltage").textContent = event.data.split(":")[1];
+			console.log(event.data);
+			if(parseFloat(event.data.split(":")[1]) < batteryLowVoltage){
+				lowbatteryCounter++;
+				if(lowbatteryCounter > 3){
+					alertLowBattery();
+					console.log('Yes');
+				}
+			}else{
+				console.log('No');
+				lowbatteryCounter = 0;
+				alertLowBatteryCancel();
+			}
+		}
 	};
 }
 
@@ -55,6 +76,39 @@ function closeWebSocket() {
 	if (webSocket) {
 		webSocket.close();
 		clearInterval(pingInterval);
+		clearInterval(BatteryInterval);
 	}
 	userClosedConnection = true;
 }
+
+function alertLowBattery(){
+	document.getElementById("batteryArea").classList.remove('battery');
+	document.getElementById("batteryArea").classList.add('lowbattery');
+	// Call the function to start continuous beeping for 5 seconds with a 200ms interval
+	beepContinuously(1000, 500);
+}
+
+function alertLowBatteryCancel(){
+	document.getElementById("batteryArea").classList.remove('lowbattery');
+	document.getElementById("batteryArea").classList.add('battery');
+}
+
+
+function beepContinuously(duration, interval) {
+	const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+	
+	function beep() {
+	  const oscillator = audioContext.createOscillator();
+	  oscillator.connect(audioContext.destination);
+	  oscillator.type = 'sine';
+	  oscillator.frequency.setValueAtTime(760, audioContext.currentTime);
+	  oscillator.start();
+	  oscillator.stop(audioContext.currentTime + 0.2);
+	}
+  
+	const beepInterval = setInterval(beep, interval);
+  
+	setTimeout(() => {
+	  clearInterval(beepInterval);
+	}, duration);
+  }

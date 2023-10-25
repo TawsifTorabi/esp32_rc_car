@@ -11,7 +11,7 @@
 	<h4>IoT RC Car Controller</h4>
 	<span class="socketConfigArea">
 		<small>RC Car Server IP Address: </small><br>
-		<input type="url" name="" id="serverAddress" value="ws://192.168.1.103:80/remote" style="width: 300px; margin-bottom: 11px;"/>
+		<input type="url" name="" id="serverAddress" value="ws://192.168.1.105:80/remote" style="width: 300px; margin-bottom: 11px;"/>
 		<!-- Button to start WebSocket connection -->
 		<button id="connectButton" onclick="openWebSocket();">Connect</button>
 		<button id="disconnectButton" onclick="closeWebSocket();" style="display: none;">Disconnect</button>
@@ -30,6 +30,9 @@
 	<!-- Display ping in milliseconds -->
 	<span class="ping">
 		Ping: <span id="pingValue">0</span>
+	</span>
+	<span class="battery" id="batteryArea">
+		Battery: <span id="batteryVoltage">0</span> V
 	</span>
 	<span class="speed">
 		Throttle: <b><span id="sliderValue">150</span></b>
@@ -89,6 +92,7 @@
 		let motor2Speed = 0;
 		let PollingRate = 90;
 		let userClosedConnection = false;
+		let batteryLowVoltage = 13.7;
 		var joy = new JoyStick('joyDiv');
 	</script>
 	
@@ -155,7 +159,7 @@ async function gameLoopVirtual() {
 		
 	}
 	
-	setInterval(gameLoopVirtual, PollingRate);
+	//setInterval(gameLoopVirtual, PollingRate);
 	
 	
 	var inputPosX = document.getElementById("posizioneX");
