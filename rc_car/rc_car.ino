@@ -3,8 +3,8 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 
-const char *ssid = "ssid";
-const char *password = "password";
+const char *ssid = "+++";
+const char *password = "+++";
 
 int motor1Pin1 = 27;
 int motor1Pin2 = 26;
@@ -56,6 +56,40 @@ void blipLED(int duration) {
   delay(duration); // Wait for the same duration again
 }
 
+
+
+
+/*
+Stay Cautious while using voltage detection, 
+I've used tuned voltage divider circuit with R1=95k and R2=20k 
+*/
+
+const int analogInputBat = 34; // Use pin 4 on your ESP32
+const float vRef = 3.3;    // ESP32 reference voltage
+const float batteryVoltageScalingFactor = 3.01; // Adjusted based on your voltage divider
+const float voltageOffset = 2.62; // Offset correction value (adjust as needed)
+
+String measureOriginalBatteryVoltage() {
+  int rawValue = analogRead(analogInputBat); // Read the analog input
+  Serial.print("Raw Value: ");
+  Serial.println(rawValue);
+  float voltage = (rawValue / 4095.0) * vRef; // Convert to voltage
+
+  // Use map() to upscale the voltage
+  float originalBatteryVoltage = map(voltage * 100, 0, batteryVoltageScalingFactor * 100, 0, 1600) / 100.0;
+
+  // Apply the offset correction
+  originalBatteryVoltage += voltageOffset;
+
+  Serial.print("Battery Voltage: ");
+  Serial.print(originalBatteryVoltage, 2); // Display voltage with 2 decimal places
+  Serial.println("V");
+
+  // Convert the voltage to a String with two decimal places
+  String voltageString = String(originalBatteryVoltage, 2);
+
+  return voltageString;
+}
 
 
 
@@ -113,6 +147,8 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
             notifyClients();
         } else if (strcmp(message, "ping") == 0) {
             ws.textAll("pong");
+        } else if (strcmp(message, "batlvl") == 0) {
+            ws.textAll("battery:" + measureOriginalBatteryVoltage());
         } else if (strcmp(message, "headlight") == 0) {
             toggleLED();
         } else if (strcmp(message, "dipper") == 0) {
